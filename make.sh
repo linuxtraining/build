@@ -22,13 +22,16 @@ XSLFILE="$LIBDIR/lt.xsl"
 FOPDIR="$LIBDIR/fop"
 export FOP_OPTS="-Xms512m -Xmx512m"
 export BOOKSDIR=./books
-DATECODE=$(date +%y%m%d | sed s/^0//)
-PUBDATE=$(date +%c)
-YEAR=$(date +%Y)
-books=$( cd $BOOKSDIR ; find * -maxdepth 1 -type d )
+
+### initialisation ###
+
 V=""
 CHAPTERS=""
 APPENDIX=""
+
+DATECODE=$(date +%y%m%d | sed s/^0//)
+PUBDATE=$(date +%c)
+YEAR=$(date +%Y)
 
 ### functions ###
 
@@ -73,7 +76,7 @@ check_ROOTDIR() {
 
 	if	[ -x make.sh -a -x buildheader.pl ]
 	then	echor "We are in the build directory, changing to parent directory."
-		cd ..
+            cd ..
 	fi
 	if	[ -d $BOOKSDIR -a -d $BOOKSDIR -a -d $MODULESDIR -a -d $BUILDDIR ]
 	then	echor "Current dir is book project root directory."
@@ -309,10 +312,12 @@ esac
 
 ##############
 
-check_ROOTDIR || ( echo "It does not look like I'm in the project root dir?" $REDIR; exit 1 )
+check_ROOTDIR || exit 1
+
+books=$( cd $BOOKSDIR ; find * -maxdepth 1 -type d )
+mkdir -p $OUTPUTDIR
 
 # Redirect everything according to REDIR var from now on.
-mkdir -p $OUTPUTDIR
 eval "exec $REDIR"
 
 # Main loop
