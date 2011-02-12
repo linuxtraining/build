@@ -7,7 +7,7 @@
 # This script is to be linked as git update hook, in the book repository
 # (not in the build submodule!)
 # then just do a nightly git pull in $GIT_DIR from CRON
-if [ -z "$GIT_DIR" -a -z "$GIT_WORK_TREE" ]
+if [ -z "$GIT_DIR" ]
 then	echo "Don't run this script from the command line." >&2
         echo " (if you want, you could supply GIT_DIR then run" >&2
         echo "  $0 " >&2
@@ -15,7 +15,7 @@ then	echo "Don't run this script from the command line." >&2
 fi
 
 # We work on a checkout of the repository. So it's not a bare repository.
-cd $GIT_WORK_TREE
+cd $GIT_DIR/../
 
 # environment
 wwwbooksdir=
