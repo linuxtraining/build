@@ -7,7 +7,7 @@
 # This script is to be linked as git update hook, in the book repository
 # (not in the build submodule!)
 # then just do a nightly git pull in $GIT_DIR from CRON
-if [ -z "$GIT_DIR" ]
+if [ -z "$GIT_DIR" -a -z "$GIT_WORK_TREE" ]
 then	echo "Don't run this script from the command line." >&2
         echo " (if you want, you could supply GIT_DIR then run" >&2
         echo "  $0 " >&2
@@ -22,7 +22,7 @@ wwwbooksdir=
 outputdir=
 www=
 MAKEOPTS=
-. build/build-lt.conf
+. build/build-lt.conf || exit 1
 
 if [ -z "$wwwbooksdir" -o -z "$outputdir" -o -z "$www" ] 
 then	echo "Please configure lt-build.conf accordingly." >&2

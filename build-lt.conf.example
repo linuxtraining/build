@@ -1,6 +1,5 @@
 # environment
-wwwbooksdir=~/www/default/wp-content/blogs.dir/linux-training/files/books/
-outputdir=./output
-www=~/proj/wwwfiles
-MAKEOPTS=""
-
+wwwbooksdir=
+outputdir=
+www=
+MAKEOPTS=
