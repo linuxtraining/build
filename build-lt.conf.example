@@ -1,5 +1,6 @@
 # environment
 wwwbooksdir=
-outputdir=
+outputdir=./output/
 www=
-MAKEOPTS=
+MAKEOPTS="-d 1"
+V="-v"

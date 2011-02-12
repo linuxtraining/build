@@ -22,14 +22,13 @@ wwwbooksdir=
 outputdir=
 www=
 MAKEOPTS=
+V=
 . build/build-lt.conf || exit 1
 
 if [ -z "$wwwbooksdir" -o -z "$outputdir" -o -z "$www" ] 
 then	echo "Please configure lt-build.conf accordingly." >&2
 	exit 1
 fi
-
-( echo "$1" | grep  "\-v" >/dev/null )  && V="-v"
 
 # fresh start function
 clean () {
