@@ -4,35 +4,43 @@
 # This script generates all the books for the download page on the website.
 # (c) 2010 Serge van Ginderachter
 
-( echo "$1" | grep  "\-v" >/dev/null )  && V="-v"
-
-# environment
-wwwbooksdir=~/www/default/wp-content/blogs.dir/linux-training/files/books/
-cd ~/src/lt
-outputdir=./output
-www=~/proj/wwwfiles
-MAKEOPTS=""
-rm $V -rf $www
-mkdir $V -p $www
-
-# pull in latest buildfiles
-CURRENT_REV=$(git show  | grep "^commit")
-git pull $V | grep -v "Already up-to-date"
-NEW_REV=$(git show  | grep "^commit")
-
-# check if the version changed, if not just exit unless the force switch is on.
-if [ "$CURRENT_REV" = "$NEW_REV" ]
-then    [ -z "$V" ] || echo "No updates."
-        ( echo "$1" | grep "\-f" >/dev/null ) || exit 0
-else    echo "Revision bumped from $CURRENT_REV to $NEW_REV."
+# This script is to be linked as git update hook, in the book repository
+# (not in the build submodule!)
+# then just do a nightly git pull in $GIT_DIR from CRON
+if [ -z "$GIT_DIR" ]
+then	echo "Don't run this script from the command line." >&2
+        echo " (if you want, you could supply GIT_DIR then run" >&2
+        echo "  $0 " >&2
+        exit 1
 fi
 
-# fresh start
+# We work on a checkout of the repository. So it's not a bare repository.
+cd $GIT_WORK_TREE
+
+# environment
+wwwbooksdir=
+outputdir=
+www=
+MAKEOPTS=
+. build/build-lt.conf
+
+if [ -z "$wwwbooksdir" -o -z "$outputdir" -o -z "$www" ] 
+then	echo "Please configure lt-build.conf accordingly." >&2
+	exit 1
+fi
+
+( echo "$1" | grep  "\-v" >/dev/null )  && V="-v"
+
+# fresh start function
 clean () {
         ./make.sh $MAKEOPTS clean
         rm -rf $outputdir
 }
 clean
+
+
+## Let's start
+mkdir $V -p $www
 
 # LinuxFun
 ./make.sh $MAKEOPTS html fundamentals
@@ -57,13 +65,9 @@ mv $V $outputdir/*.pdf $www/LinuxSrv.pdf
 ./make.sh $MAKEOPTS clean
 mv $V $outputdir/*.pdf $www/LinuxTraining.pdf
 
-# DataNet
-cp lib/20101106-DataNet.pdf $www/DataNet.pdf
-
 # cleanup
 clean
 
 rsync $V -a $www/ $wwwbooksdir/ --delete || exit 1
 
 exit 0
-}
