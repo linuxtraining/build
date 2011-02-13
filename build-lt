@@ -44,7 +44,8 @@ mkdir $V -p $www
 # LinuxFun
 ./make.sh $MAKEOPTS html fundamentals
 mkdir $V -p $www/html/
-mv $V -T $outputdir/html $www/html/fun
+rsync -a $V $outputdir/html/ $www/html/fun/ --delete
+
 ./make.sh $MAKEOPTS build fundamentals
 ./make.sh $MAKEOPTS clean
 mv $V $outputdir/*.pdf $www/LinuxFun.pdf
