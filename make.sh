@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+set -x
 
 ### module info ###
 # The build environment expects to live in a subdir build/
@@ -87,15 +88,22 @@ check_ROOTDIR() {
         }
 
 add_mod() {
-        MODULES=${MODULES}" "$MODULESDIR/$1
-        }
-
-add_chapt() {
-        CHAPTERS=${CHAPTERS}" "$1
-        }
-
-add_appen() {
-        APPENDIX=${APPENDIX}" "$1
+        # add_mod $type $name
+        # type is chapter appendix of minibook
+        # name is name of module or book
+        type=$1
+        name=$2
+        case $type in
+            chapter)
+                CHAPTERS=${CHAPTERS}" "$name
+                ;;
+            appendix)
+                APPENDIX=${APPENDIX}" "$name
+                ;;
+            minibook)
+                MINIBOOKS=${MINIBOOKS}" "$name
+                ;;
+        esac
         }
 
 echor() {	# echo error
@@ -160,43 +168,95 @@ build_footer() {
 	cat modules/footer/footer.xml >$footerfile
 	}
 
+build_part_body() {
+
+    for modtype in CHAPTERS APPENDIX
+    do
+        echod Building $modtype ..
+        for mod in ${!modtype}
+        do
+            echod -n "Building module $mod "
+            modfile=$OUTPUTDIR/mod_$mod.xml
+            ## TODO check which xml files we have and put them in $MODULES
+            MODULES=$(ls modules/${mod}/*)
+            echo $MODULES
+            # Generate the start chapter/appendix tag
+            case $modtype in
+                CHAPTERS)
+                    echo "<chapter><title>"$chaptitle"</title>"      > $modfile
+                    ;;
+                APPENDIX)
+        		    echo "<appendix><title>"$chaptitle"</title>" 	 > $modfile
+                    ;;
+            esac
+            # Generate all the sections
+            for module in $MODULES
+            do
+                echod -n "\t.. adding module $module"
+                cat $module                                 >> $modfile
+            done
+            echod
+            # Generate the end chapter tag
+            case $modtype in
+                CHAPTERS)
+                    echo "</chapter>"                               >> $modfile
+                    ;;
+                APPENDIX)
+                    echo "</appendix>"                               >> $modfile
+                    ;;
+            esac
+            cat $modfile                                        >> $partfile
+
+        done
+    done
+
+}
+
+build_part() {
+    PART=$1
+    if [ "$PART" = "CUSTOMPART" ]
+    then    # just build the part body using the chapters and apendices from the main book config
+            build_part_body
+    else    # first read in the config of this part minibook
+            . $BOOKSDIR/$PART/config
+            # then build that part body
+            build_part_body
+    fi
+    }
+
+fill_part() {
+            echo "<part>"       >>$bodyfile
+            cat $1              >>$bodyfile
+            echo "</part>"      >>$bodyfile
+
+}
 build_body() {
-	for chapter in $CHAPTERS; do
-		echod -n "Building chapter $chapter " 
-		modfile=$OUTPUTDIR/mod_$chapter.xml
-		# load the chapter specific settings
-		echod -n "\t.. loading settings chapt_$chapter" 
-		eval chapt_$chapter
-		# Generate the end chapter tag
-		echo "<chapter><title>"$chaptitle"</title>" 	 > $modfile
-		# Generate all the sections
-		for module in $MODULES
-		do
-			echod -n "\t.. adding module $module" 
-			cat $module 				>> $modfile
-		done
-		echod
-		# Generate the end chapter tag
-		echo "</chapter>"      				>> $modfile
-		cat $modfile					>> $bodyfile
-	done
-	for appendix in $APPENDIX; do
-		echod -n "Building appendix $appendix .. " 
-		modfile=$OUTPUTDIR/mod_$appendix.xml
-		# load the chapter specific settings
-		echod " .. loading settings chapt_$appendix"
-		eval chapt_$appendix
-		# Generate the end chapter tag
-		echo "<appendix><title>"$chaptitle"</title>" 	 > $modfile
-		# Generate all the sections
-		for module in $MODULES; do
-			echod "     adding module $module"
-			cat $module 				>> $modfile
-			done
-		# Generate the end chapter tag
-		echo "</appendix>"     				>> $modfile
-		cat $modfile					>> $bodyfile
-	done
+    # first build minibooks, each minibook is a "<part>"
+    # then chapters, then appendices "which each are "<chapter>
+    # if we have both minibooks and separate chapters+appendices, then build the latter set as a custom minibook in a separate <part>
+    # if we have no minibooks, then no need for "<part>"
+
+    if [ -z "$CHAPTERS $APPENDIX" ]
+    then    # no custom part
+            HAZ_CUSTOMPART=0
+    else    # build the custom part
+            HAZ_CUSTOMPART=1
+            build_part CUSTOMPART
+            # keep this part's body for the last part
+            cp $partfile $partcustomfile
+    fi
+            
+    if [ -z "$MINIBOOKS" ]
+    then    # no minibooks
+            HAZ_MINIBOOKS=0
+    else    # build minibooks
+            HAZ_MINIBOOKS=1
+            for minibook in $MINIBOOKS
+            do  build_part $minibook
+                fill_part $partfile
+            done
+            fill_part $custompartfile
+    fi
 	}
 
 build_xml() {
@@ -206,7 +266,7 @@ build_xml() {
 
     VERSIONSTRING=lt-$MAJOR.$MINOR
 
-	echo "Generating book $book (titled \"$BOOKTITLE\")"
+	echo "generating book $book (titled \"$BOOKTITLE\")"
 	[ -d $OUTPUTDIR ] || mkdir $OUTPUTDIR
 
 	BOOKTITLE2=$(echo $BOOKTITLE | sed -e 's/\ /\_/g' -e 's@/@-@g' )
@@ -216,15 +276,17 @@ build_xml() {
 	headerfile=$OUTPUTDIR/section_header.xml
 	footerfile=$OUTPUTDIR/section_footer.xml
 	bodyfile=$OUTPUTDIR/section_body.xml
+    partfile=$OUTPUTDIR/part.xml
+    partcustomfile=$OUTPUTDIR/custompart.xml
 
 	# make header
 	build_header
 
-	# make body
-	build_body
-
 	# make footer
 	build_footer
+
+	# make body
+	build_body
 
 	# build master xml
 	echo "Building $xmlfile"
@@ -233,7 +295,7 @@ build_xml() {
 	cat $footerfile >> $xmlfile
 	}
 
-build_book() {
+build_pdf() {
 	set_JAVA
 	echo 
 	echo "---------------------------------"
@@ -330,7 +392,8 @@ case "$command" in
 	check_book
 	echo "Building '$book' book."
 	build_xml
-	build_book
+	echo "Generating pdf for '$book' book."
+	build_pdf
 	echo "Done generating pdf $OUTPUTDIR/book.pdf -> $pdffile" 
 	;;
   html)
