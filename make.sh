@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 ### module info ###
 # The build environment expects to live in a subdir build/
@@ -177,16 +176,18 @@ build_part_body() {
         do
             echod -n "Building module $mod "
             modfile=$OUTPUTDIR/mod_$mod.xml
-            ## TODO check which xml files we have and put them in $MODULES
+
+            # enumerate module files for this module $mod
             MODULES=$(ls modules/${mod}/*)
             echo $MODULES
+
             # Generate the start chapter/appendix tag
             case $modtype in
                 CHAPTERS)
-                    echo "<chapter><title>"$chaptitle"</title>"      > $modfile
+                    echo "<chapter>"      > $modfile
                     ;;
                 APPENDIX)
-        		    echo "<appendix><title>"$chaptitle"</title>" 	 > $modfile
+        		    echo "<appendix>" 	 > $modfile
                     ;;
             esac
             # Generate all the sections
@@ -196,6 +197,7 @@ build_part_body() {
                 cat $module                                 >> $modfile
             done
             echod
+
             # Generate the end chapter tag
             case $modtype in
                 CHAPTERS)
@@ -205,7 +207,9 @@ build_part_body() {
                     echo "</appendix>"                               >> $modfile
                     ;;
             esac
-            cat $modfile                                        >> $partfile
+
+            # add the module to the body
+            cat $modfile >> $partfile
 
         done
     done
@@ -214,10 +218,16 @@ build_part_body() {
 
 build_part() {
     PART=$1
+
+    # empty the partfile
+    >$partfile
+
     if [ "$PART" = "CUSTOMPART" ]
     then    # just build the part body using the chapters and apendices from the main book config
             build_part_body
     else    # first read in the config of this part minibook
+            CHAPTERS=""
+            APPENDIX=""
             . $BOOKSDIR/$PART/config
             # then build that part body
             build_part_body
@@ -243,24 +253,27 @@ build_body() {
             HAZ_CUSTOMPART=1
             build_part CUSTOMPART
             # keep this part's body for the last part
-            cp $partfile $partcustomfile
+            mv $partfile $partcustomfile
     fi
             
     if [ -z "$MINIBOOKS" ]
     then    # no minibooks
             HAZ_MINIBOOKS=0
+            cat $partcustomfile   >>$bodyfile
     else    # build minibooks
             HAZ_MINIBOOKS=1
             for minibook in $MINIBOOKS
             do  build_part $minibook
                 fill_part $partfile
             done
-            fill_part $custompartfile
+            [ $HAZ_CUSTOMPART ] && fill_part $partcustomfile
     fi
 	}
 
 build_xml() {
 	echo -n "Parsing config $BOOKSDIR/$book/config ... "
+    CHAPTERS=""
+    APPENDIX=""
 	. $BOOKSDIR/$book/config
 	. $BOOKSDIR/$book/version
 
@@ -277,7 +290,7 @@ build_xml() {
 	footerfile=$OUTPUTDIR/section_footer.xml
 	bodyfile=$OUTPUTDIR/section_body.xml
     partfile=$OUTPUTDIR/part.xml
-    partcustomfile=$OUTPUTDIR/custompart.xml
+    partcustomfile=$OUTPUTDIR/partcustom.xml
 
 	# make header
 	build_header
