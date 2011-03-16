@@ -273,7 +273,7 @@ build_body() {
             if [ $HAZ_CUSTOMPART ]
 	    then 
 		# set booktitle for custompart
-		if [ $(echo $CHAPTERS $APPENDIX | wc -l ) -gt 1 ]
+		if [ $(echo $CHAPTERS $APPENDIX | wc -w ) -gt 1 ]
 		then	BOOKTITLE="Appendices"
 		else	BOOKTITLE="Appendix"
 		fi
