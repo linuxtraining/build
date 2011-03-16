@@ -27,7 +27,7 @@ export BOOKSDIR=./books
 
 V=""
 CHAPTERS=""
-APPENDIX=""
+APPENDICES=""
 
 DATECODE=$(date +%y%m%d | sed s/^0//)
 PUBDATE=$(date +%c)
@@ -97,7 +97,7 @@ add_mod() {
                 CHAPTERS=${CHAPTERS}" "$name
                 ;;
             appendix)
-                APPENDIX=${APPENDIX}" "$name
+                APPENDICES=${APPENDICES}" "$name
                 ;;
             minibook)
                 MINIBOOKS=${MINIBOOKS}" "$name
@@ -169,7 +169,7 @@ build_footer() {
 
 build_part_body() {
 
-    for modtype in CHAPTERS APPENDIX
+    for modtype in CHAPTERS APPENDICES
     do
         echod Building $modtype ..
         for mod in ${!modtype}
@@ -186,7 +186,7 @@ build_part_body() {
                 CHAPTERS)
                     echo "<chapter>"      > $modfile
                     ;;
-                APPENDIX)
+                APPENDICES)
         		    echo "<appendix>" 	 > $modfile
                     ;;
             esac
@@ -203,7 +203,7 @@ build_part_body() {
                 CHAPTERS)
                     echo "</chapter>"                               >> $modfile
                     ;;
-                APPENDIX)
+                APPENDICES)
                     echo "</appendix>"                               >> $modfile
                     ;;
             esac
@@ -227,7 +227,7 @@ build_part() {
             build_part_body
     else    # first read in the config of this part minibook
             CHAPTERS=""
-            APPENDIX=""
+            APPENDICES=""
             . $BOOKSDIR/$PART/config
             # then build that part body
             build_part_body
@@ -248,7 +248,7 @@ build_body() {
     # if we have both minibooks and separate chapters+appendices, then build the latter set as a custom minibook in a separate <part>
     # if we have no minibooks, then no need for "<part>"
 
-    if [ -z "$CHAPTERS $APPENDIX" ]
+    if [ -z "$CHAPTERS $APPENDICES" ]
     then    # no custom part
             HAZ_CUSTOMPART=0
     else    # build the custom part
@@ -273,7 +273,7 @@ build_body() {
             if [ $HAZ_CUSTOMPART ]
 	    then 
 		# set booktitle for custompart
-		if [ $(echo $CHAPTERS $APPENDIX | wc -w ) -gt 1 ]
+		if [ $(echo $CHAPTERS $APPENDICES | wc -w ) -gt 1 ]
 		then	BOOKTITLE="Appendices"
 		else	BOOKTITLE="Appendix"
 		fi
@@ -286,14 +286,14 @@ build_body() {
 build_xml() {
 	echo -n "Parsing config $BOOKSDIR/$book/config ... "
 	CHAPTERS=""
-	APPENDIX=""
+	APPENDICES=""
 	. $BOOKSDIR/$book/config
 	. $BOOKSDIR/$book/version
 
 	echod "This book contains:"
 	echod "MINIBOOKS = $MINIBOOKS"
 	echod "CHAPTERS = $CHAPTERS"
-	echod "APPENDIX = $APPENDIX"
+	echod "APPENDICES = $APPENDICES"
 
 	VERSIONSTRING=lt-$MAJOR.$MINOR
 
