@@ -235,9 +235,11 @@ build_part() {
     }
 
 fill_part() {
-            echo "<part>"       >>$bodyfile
-            cat $1              >>$bodyfile
-            echo "</part>"      >>$bodyfile
+	echo "<part>"       			>>$bodyfile
+	# Here we use the BOOKTITLE as a title for the PART
+	echo "<title>$BOOKTITLE</title>"        >>$bodyfile
+	cat $1              			>>$bodyfile
+	echo "</part>"      			>>$bodyfile
 
 }
 build_body() {
@@ -251,6 +253,7 @@ build_body() {
             HAZ_CUSTOMPART=0
     else    # build the custom part
             HAZ_CUSTOMPART=1
+	    echod "Assembling the custom part or simple book."
             build_part CUSTOMPART
             # keep this part's body for the last part
             mv $partfile $partcustomfile
@@ -263,21 +266,36 @@ build_body() {
     else    # build minibooks
             HAZ_MINIBOOKS=1
             for minibook in $MINIBOOKS
-            do  build_part $minibook
+            do  echod "Assembling the part for minibook $minibook"
+		build_part $minibook
                 fill_part $partfile
             done
-            [ $HAZ_CUSTOMPART ] && fill_part $partcustomfile
+            if [ $HAZ_CUSTOMPART ]
+	    then 
+		# set booktitle for custompart
+		if [ $(echo $CHAPTERS $APPENDIX | wc -l ) -gt 1 ]
+		then	BOOKTITLE="Appendices"
+		else	BOOKTITLE="Appendix"
+		fi
+		echod "Adding the custom part at the end."
+		fill_part $partcustomfile
+	    fi
     fi
 	}
 
 build_xml() {
 	echo -n "Parsing config $BOOKSDIR/$book/config ... "
-    CHAPTERS=""
-    APPENDIX=""
+	CHAPTERS=""
+	APPENDIX=""
 	. $BOOKSDIR/$book/config
 	. $BOOKSDIR/$book/version
 
-    VERSIONSTRING=lt-$MAJOR.$MINOR
+	echod "This book contains:"
+	echod "MINIBOOKS = $MINIBOOKS"
+	echod "CHAPTERS = $CHAPTERS"
+	echod "APPENDIX = $APPENDIX"
+
+	VERSIONSTRING=lt-$MAJOR.$MINOR
 
 	echo "generating book $book (titled \"$BOOKTITLE\")"
 	[ -d $OUTPUTDIR ] || mkdir $OUTPUTDIR
@@ -289,8 +307,8 @@ build_xml() {
 	headerfile=$OUTPUTDIR/section_header.xml
 	footerfile=$OUTPUTDIR/section_footer.xml
 	bodyfile=$OUTPUTDIR/section_body.xml
-    partfile=$OUTPUTDIR/part.xml
-    partcustomfile=$OUTPUTDIR/partcustom.xml
+	partfile=$OUTPUTDIR/part.xml
+	partcustomfile=$OUTPUTDIR/partcustom.xml
 
 	# make header
 	build_header
