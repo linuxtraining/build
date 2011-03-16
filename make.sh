@@ -178,7 +178,12 @@ build_part_body() {
             modfile=$OUTPUTDIR/mod_$mod.xml
 
             # enumerate module files for this module $mod
-            MODULES=$(ls modules/${mod}/*)
+	    if [ -d modules/$mod ]
+	    then	MODULES=$(ls modules/${mod}/*)
+ 	    else	echo "Error: module $mod does not exist!" 
+			echor "Fatal error occurred!"
+			exit 1
+	    fi
             echo $MODULES
 
             # Generate the start chapter/appendix tag
