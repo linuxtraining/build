@@ -23,6 +23,12 @@ FOPDIR="$LIBDIR/fop"
 export FOP_OPTS="-Xms512m -Xmx512m"
 export BOOKSDIR=./books
 
+### script configuration ###
+
+# set this to empty or zero to disabale this feature
+# this could be moved to a book config
+BUNDLE_APPENDICES=1
+
 ### initialisation ###
 
 V=""
