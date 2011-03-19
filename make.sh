@@ -246,10 +246,19 @@ build_part() {
 
     if [ "$PART" = "CUSTOMPART" ]
     then    # just build the part body using the chapters and apendices from the main book config
+	    if [ "$BUNDLE_APPENDICES" = 1 ]
+	    then	echod "restore the bundled appendices: ${APPENDICES_BUNDLE}"
+			APPENDICES=${APPENDICES_BUNDLE}
+	    fi
             . $BOOKSDIR/$book/config
             build_part_body
     else    # first read in the config of this part minibook
             . $BOOKSDIR/$PART/config
+	    if [ "$BUNDLE_APPENDICES" = 1 ]
+	    then	# move content of APPENDICES var to be used later in the custompart
+			APPENDICES_BUNDLE=${APPENDICES_BUNDLE}${APPENDICES}
+			APPENDICES=""
+	    fi
             # then build that part body
             build_part_body
     fi
