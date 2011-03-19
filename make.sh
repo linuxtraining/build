@@ -221,24 +221,6 @@ build_part_body() {
 
 }
 
-build_part() {
-    PART=$1
-
-    # empty the partfile
-    >$partfile
-
-    if [ "$PART" = "CUSTOMPART" ]
-    then    # just build the part body using the chapters and apendices from the main book config
-            build_part_body
-    else    # first read in the config of this part minibook
-            CHAPTERS=""
-            APPENDICES=""
-            . $BOOKSDIR/$PART/config
-            # then build that part body
-            build_part_body
-    fi
-    }
-
 fill_part() {
 	echo "<part>"       			>>$bodyfile
 	# Here we use the BOOKTITLE as a title for the PART
@@ -247,27 +229,35 @@ fill_part() {
 	echo "</part>"      			>>$bodyfile
 
 }
+
+build_part() {
+    PART=$1
+
+    # empty the partfile and reset the variables
+    >$partfile
+    CHAPTERS=""
+    APPENDICES=""
+
+    if [ "$PART" = "CUSTOMPART" ]
+    then    # just build the part body using the chapters and apendices from the main book config
+            . $BOOKSDIR/$book/config
+            build_part_body
+    else    # first read in the config of this part minibook
+            . $BOOKSDIR/$PART/config
+            # then build that part body
+            build_part_body
+    fi
+    }
+
 build_body() {
     # first build minibooks, each minibook is a "<part>"
     # then chapters, then appendices "which each are "<chapter>
     # if we have both minibooks and separate chapters+appendices, then build the latter set as a custom minibook in a separate <part>
     # if we have no minibooks, then no need for "<part>"
 
-    if [ -z "$CHAPTERS $APPENDICES" ]
-    then    # no custom part
-            HAZ_CUSTOMPART=0
-    else    # build the custom part
-            HAZ_CUSTOMPART=1
-	    echod "Assembling the custom part or simple book."
-            build_part CUSTOMPART
-            # keep this part's body for the last part
-            mv $partfile $partcustomfile
-    fi
-            
     if [ -z "$MINIBOOKS" ]
     then    # no minibooks
             HAZ_MINIBOOKS=0
-            cat $partcustomfile   >>$bodyfile
     else    # build minibooks
             HAZ_MINIBOOKS=1
             for minibook in $MINIBOOKS
@@ -275,18 +265,30 @@ build_body() {
 		build_part $minibook
                 fill_part $partfile
             done
-            if [ $HAZ_CUSTOMPART ]
-	    then 
-		# set booktitle for custompart
-		if [ $(echo $CHAPTERS $APPENDICES | wc -w ) -gt 1 ]
-		then	BOOKTITLE="Appendices"
-		else	BOOKTITLE="Appendix"
-		fi
-		echod "Adding the custom part at the end."
-		fill_part $partcustomfile
+    fi
+
+    if [ -z "$CHAPTERS $APPENDICES" ]
+    then    # no custom part
+            HAZ_CUSTOMPART=0
+    else    # simple custom book or custom part
+            HAZ_CUSTOMPART=1
+	    # just build the custom book
+	    echod "Assembling the custom part or simple book."
+            build_part CUSTOMPART
+	    if [ $HAZ_MINIBOOKS = 0 ]
+	    then	# just use partfile as bookbody
+            		cat $partfile   >>$bodyfile
+	    else	# add custom part as extra part
+			# set booktitle for custompart
+			if [ $(echo $CHAPTERS $APPENDICES | wc -w ) -gt 1 ]
+			then	BOOKTITLE="Appendices"
+			else	BOOKTITLE="Appendix"
+			fi
+			echod "Adding the custom part at the end."
+			fill_part $partfile
 	    fi
     fi
-	}
+    }
 
 build_xml() {
 	echo -n "Parsing config $BOOKSDIR/$book/config ... "
