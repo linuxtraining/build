@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ### module info ###
 # The build environment expects to live in a subdir build/
@@ -23,11 +23,17 @@ FOPDIR="$LIBDIR/fop"
 export FOP_OPTS="-Xms512m -Xmx512m"
 export BOOKSDIR=./books
 
+### script configuration ###
+
+# set this to empty or zero to disable this feature
+# this could be moved to a book config
+BUNDLE_APPENDICES=1
+
 ### initialisation ###
 
 V=""
 CHAPTERS=""
-APPENDIX=""
+APPENDICES=""
 
 DATECODE=$(date +%y%m%d | sed s/^0//)
 PUBDATE=$(date +%c)
@@ -87,15 +93,22 @@ check_ROOTDIR() {
         }
 
 add_mod() {
-        MODULES=${MODULES}" "$MODULESDIR/$1
-        }
-
-add_chapt() {
-        CHAPTERS=${CHAPTERS}" "$1
-        }
-
-add_appen() {
-        APPENDIX=${APPENDIX}" "$1
+        # add_mod $type $name
+        # type is chapter appendix of minibook
+        # name is name of module or book
+        type=$1
+        name=$2
+        case $type in
+            chapter)
+                CHAPTERS=${CHAPTERS}" "$name
+                ;;
+            appendix)
+                APPENDICES=${APPENDICES}" "$name
+                ;;
+            minibook)
+                MINIBOOKS=${MINIBOOKS}" "$name
+                ;;
+        esac
         }
 
 echor() {	# echo error
@@ -160,53 +173,153 @@ build_footer() {
 	cat modules/footer/footer.xml >$footerfile
 	}
 
+build_part_body() {
+
+    for modtype in CHAPTERS APPENDICES
+    do
+        echod Building $modtype ..
+        for mod in ${!modtype}
+        do
+            echod -n "Building module $mod "
+            modfile=$OUTPUTDIR/mod_$mod.xml
+
+            # enumerate module files for this module $mod
+	    if [ -d modules/$mod ]
+	    then	MODULES=$(ls modules/${mod}/*)
+ 	    else	echo "Error: module $mod does not exist!" 
+			echor "Fatal error occurred!"
+			exit 1
+	    fi
+            echo $MODULES
+
+            # Generate the start chapter/appendix tag
+            case $modtype in
+                CHAPTERS)
+                    echo "<chapter>"      > $modfile
+                    ;;
+                APPENDICES)
+        		    echo "<appendix>" 	 > $modfile
+                    ;;
+            esac
+            # Generate all the sections
+            for module in $MODULES
+            do
+                echod -n "\t.. adding module $module"
+                cat $module                                 >> $modfile
+            done
+            echod
+
+            # Generate the end chapter tag
+            case $modtype in
+                CHAPTERS)
+                    echo "</chapter>"                               >> $modfile
+                    ;;
+                APPENDICES)
+                    echo "</appendix>"                               >> $modfile
+                    ;;
+            esac
+
+            # add the module to the body
+            cat $modfile >> $partfile
+
+        done
+    done
+
+}
+
+fill_part() {
+	echo "<part>"       			>>$bodyfile
+	# Here we use the BOOKTITLE as a title for the PART
+	echo "<title>$BOOKTITLE</title>"        >>$bodyfile
+	cat $1              			>>$bodyfile
+	echo "</part>"      			>>$bodyfile
+
+}
+
+build_part() {
+    PART=$1
+
+    # empty the partfile and reset the variables
+    >$partfile
+    CHAPTERS=""
+    APPENDICES=""
+
+    if [ "$PART" = "CUSTOMPART" ]
+    then    # just build the part body using the chapters and apendices from the main book config
+	    if [ "$BUNDLE_APPENDICES" = 1 ]
+	    then	echod "restore the bundled appendices: ${APPENDICES_BUNDLE}"
+			APPENDICES=${APPENDICES_BUNDLE}
+	    fi
+            . $BOOKSDIR/$book/config
+            build_part_body
+    else    # first read in the config of this part minibook
+            . $BOOKSDIR/$PART/config
+	    if [ "$BUNDLE_APPENDICES" = 1 ]
+	    then	# move content of APPENDICES var to be used later in the custompart
+			APPENDICES_BUNDLE=${APPENDICES_BUNDLE}${APPENDICES}
+			APPENDICES=""
+	    fi
+            # then build that part body
+            build_part_body
+    fi
+    }
+
 build_body() {
-	for chapter in $CHAPTERS; do
-		echod -n "Building chapter $chapter " 
-		modfile=$OUTPUTDIR/mod_$chapter.xml
-		# load the chapter specific settings
-		echod -n "\t.. loading settings chapt_$chapter" 
-		eval chapt_$chapter
-		# Generate the end chapter tag
-		echo "<chapter><title>"$chaptitle"</title>" 	 > $modfile
-		# Generate all the sections
-		for module in $MODULES
-		do
-			echod -n "\t.. adding module $module" 
-			cat $module 				>> $modfile
-		done
-		echod
-		# Generate the end chapter tag
-		echo "</chapter>"      				>> $modfile
-		cat $modfile					>> $bodyfile
-	done
-	for appendix in $APPENDIX; do
-		echod -n "Building appendix $appendix .. " 
-		modfile=$OUTPUTDIR/mod_$appendix.xml
-		# load the chapter specific settings
-		echod " .. loading settings chapt_$appendix"
-		eval chapt_$appendix
-		# Generate the end chapter tag
-		echo "<appendix><title>"$chaptitle"</title>" 	 > $modfile
-		# Generate all the sections
-		for module in $MODULES; do
-			echod "     adding module $module"
-			cat $module 				>> $modfile
-			done
-		# Generate the end chapter tag
-		echo "</appendix>"     				>> $modfile
-		cat $modfile					>> $bodyfile
-	done
-	}
+    # first build minibooks, each minibook is a "<part>"
+    # then chapters, then appendices "which each are "<chapter>
+    # if we have both minibooks and separate chapters+appendices, then build the latter set as a custom minibook in a separate <part>
+    # if we have no minibooks, then no need for "<part>"
+
+    if [ -z "$MINIBOOKS" ]
+    then    # no minibooks
+            HAZ_MINIBOOKS=0
+    else    # build minibooks
+            HAZ_MINIBOOKS=1
+            for minibook in $MINIBOOKS
+            do  echod "Assembling the part for minibook $minibook"
+		build_part $minibook
+                fill_part $partfile
+            done
+    fi
+
+    if [ -z "$CHAPTERS $APPENDICES" ]
+    then    # no custom part
+            HAZ_CUSTOMPART=0
+    else    # simple custom book or custom part
+            HAZ_CUSTOMPART=1
+	    # just build the custom book
+	    echod "Assembling the custom part or simple book."
+            build_part CUSTOMPART
+	    if [ $HAZ_MINIBOOKS = 0 ]
+	    then	# just use partfile as bookbody
+            		cat $partfile   >>$bodyfile
+	    else	# add custom part as extra part
+			# set booktitle for custompart
+			if [ $(echo $CHAPTERS $APPENDICES | wc -w ) -gt 1 ]
+			then	BOOKTITLE="Appendices"
+			else	BOOKTITLE="Appendix"
+			fi
+			echod "Adding the custom part at the end."
+			fill_part $partfile
+	    fi
+    fi
+    }
 
 build_xml() {
 	echo -n "Parsing config $BOOKSDIR/$book/config ... "
+	CHAPTERS=""
+	APPENDICES=""
 	. $BOOKSDIR/$book/config
 	. $BOOKSDIR/$book/version
 
-    VERSIONSTRING=lt-$MAJOR.$MINOR
+	echod "This book contains:"
+	echod "MINIBOOKS = $MINIBOOKS"
+	echod "CHAPTERS = $CHAPTERS"
+	echod "APPENDICES = $APPENDICES"
 
-	echo "Generating book $book (titled \"$BOOKTITLE\")"
+	VERSIONSTRING=lt-$MAJOR.$MINOR
+
+	echo "generating book $book (titled \"$BOOKTITLE\")"
 	[ -d $OUTPUTDIR ] || mkdir $OUTPUTDIR
 
 	BOOKTITLE2=$(echo $BOOKTITLE | sed -e 's/\ /\_/g' -e 's@/@-@g' )
@@ -216,15 +329,17 @@ build_xml() {
 	headerfile=$OUTPUTDIR/section_header.xml
 	footerfile=$OUTPUTDIR/section_footer.xml
 	bodyfile=$OUTPUTDIR/section_body.xml
+	partfile=$OUTPUTDIR/part.xml
+	partcustomfile=$OUTPUTDIR/partcustom.xml
 
 	# make header
 	build_header
 
-	# make body
-	build_body
-
 	# make footer
 	build_footer
+
+	# make body
+	build_body
 
 	# build master xml
 	echo "Building $xmlfile"
@@ -233,7 +348,7 @@ build_xml() {
 	cat $footerfile >> $xmlfile
 	}
 
-build_book() {
+build_pdf() {
 	set_JAVA
 	echo 
 	echo "---------------------------------"
@@ -330,7 +445,8 @@ case "$command" in
 	check_book
 	echo "Building '$book' book."
 	build_xml
-	build_book
+	echo "Generating pdf for '$book' book."
+	build_pdf
 	echo "Done generating pdf $OUTPUTDIR/book.pdf -> $pdffile" 
 	;;
   html)
