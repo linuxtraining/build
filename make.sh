@@ -67,9 +67,8 @@ help() {
 
 set_xsl() {
 	if	[ -r $BOOKSDIR/$book/lt.xsl ]
-		then	XSLFILE=$BOOKSDIR/$book/lt.xsl
-	elif	[ -r $BOOKSDIR/lt.xsl ]
-		then	XSLFILE=$BOOKSDIR/lt.xsl
+		then	XSLFILE="$BOOKSDIR/$book/lt.xsl"
+		else	XSLFILE="$LIBDIR/lt.xsl"
 	fi
 }
 
