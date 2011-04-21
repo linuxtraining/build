@@ -18,7 +18,6 @@ IMAGESDIR="./images"
 MODULESDIR="./modules"
 BUILDDIR="./build"
 LIBDIR="$BUILDDIR/lib"
-XSLFILE="$LIBDIR/lt.xsl"
 FOPDIR="$LIBDIR/fop"
 export FOP_OPTS="-Xms512m -Xmx512m"
 export BOOKSDIR=./books
@@ -65,6 +64,14 @@ help() {
 	echo "      minibooks:" $minibooks
 	echo
 	}
+
+set_xsl() {
+	if	[ -r $BOOKSDIR/$book/lt.xsl ]
+		then	XSLFILE=$BOOKSDIR/$book/lt.xsl
+	elif	[ -r $BOOKSDIR/lt.xsl ]
+		then	XSLFILE=$BOOKSDIR/lt.xsl
+	fi
+}
 
 set_JAVA() {
 	# use the correct java runtime for fop on Ubuntu
@@ -350,6 +357,7 @@ build_xml() {
 	}
 
 build_pdf() {
+	set_xsl
 	set_JAVA
 	echo 
 	echo "---------------------------------"
