@@ -61,7 +61,8 @@ help() {
 	echo "  build [BOOK]		build book"
 	echo "  html [BOOK]		generate html"
 	echo
-	echo "Available books:" $books
+	echo "Available books:" $superbooks
+	echo "      minibooks:" $minibooks
 	echo
 	}
 
@@ -429,7 +430,10 @@ esac
 
 check_ROOTDIR || exit 1
 
-books=$( cd $BOOKSDIR ; find * -maxdepth 1 -type d )
+books=$( cd $BOOKSDIR ; find * -maxdepth 1 -type d)
+superbooks=$( cd $BOOKSDIR ; find * -maxdepth 1 -type d | grep -v minibook )
+minibooks=$( cd $BOOKSDIR ; find * -maxdepth 1 -type d | grep minibook)
+
 mkdir -p $OUTPUTDIR
 
 # Redirect everything according to REDIR var from now on.
