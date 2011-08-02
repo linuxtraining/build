@@ -262,7 +262,7 @@ article/appendix  nop
 /article  toc,title
 book      toc,title,figure,table,example,equation
 chapter   toc,title
-part      toc,title
+part      title
 /preface  toc,title
 reference toc,title
 /sect1    toc
