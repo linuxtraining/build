@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 ### module info ###
 # The build environment expects to live in a subdir build/
