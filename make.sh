@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 ### module info ###
 # The build environment expects to live in a subdir build/
@@ -368,11 +368,11 @@ build_pdf() {
 
 build_html() {
     [ -d $HTMLDIR ] && rm -rf $V $HTMLDIR
-    mkdir $HTMLDIR || ( echor Error creating $HTMLDIR; exit 1 )
-    mkdir $HTMLIMGDIR || ( echor Error creating $HTMLIMGDIR; exit 1 )
+    mkdir $V $HTMLDIR || ( echor Error creating $HTMLDIR; exit 1 )
+    mkdir $V $HTMLIMGDIR || ( echor Error creating $HTMLIMGDIR; exit 1 )
 
     # We only need the one xml file
-    cp $xmlfile $HTMLDIR || ( echor error copying $xmlfile ; exit 1 )
+    cp $V $xmlfile $HTMLDIR || ( echor error copying $xmlfile ; exit 1 )
 
     # Locate the used images in the xml file
     images=`grep imagedata $HTMLDIR/*.xml | cut -d/ -f2 | cut -d\" -f1`
@@ -381,7 +381,7 @@ build_html() {
     for img in $images
     do
          echo Copying $img to $HTMLIMGDIR ...
-         cp $V "$imgdir/$img" $HTMLIMGDIR/ || echor Error copying $img 
+         cp $V "$IMAGESDIR/$img" $HTMLIMGDIR/ || echor Error copying $img 
     done
 
     # Run xmlto in $HTMLDIR to generate the html
