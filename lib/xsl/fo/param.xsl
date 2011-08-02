@@ -856,7 +856,7 @@ set       toc,title
   <xsl:attribute name="space-after.maximum">2em</xsl:attribute>
 </xsl:attribute-set>
 <xsl:param name="toc.max.depth">8</xsl:param>
-<xsl:param name="toc.section.depth">2</xsl:param>
+<xsl:param name="toc.section.depth">0</xsl:param>
 <xsl:param name="ulink.footnotes" select="0"/>
 <xsl:param name="ulink.hyphenate"/>
 <xsl:param name="ulink.hyphenate.chars">/</xsl:param>
