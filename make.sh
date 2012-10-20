@@ -73,15 +73,12 @@ set_xsl() {
 }
 
 set_JAVA() {
-	# use the correct java runtime for fop on Ubuntu
-	# according to http://linuxmafia.com/faq/Admin/release-files.html
-	if [ -f /etc/lsb-release ]
-	then    #Ubuntu
-	        export JAVA_HOME=/usr/lib/jvm/java-6-sun/jre
-	elif [ -f /etc/debian_version ]
-	then    # use the correct java runtime for fop on Debian Lenny
-	        export JAVA_HOME=/usr/lib/jvm/default-java/jre
+	# Debian / ubuntu specific
+	if [ -x "$(which java)" ]
+	then    JAVA_ALTERNATIVE=$(readlink /etc/alternatives/java)
+		export JAVA_HOME=${JAVA_ALTERNATIVE%/bin/java}
 	else    echor Could not set JAVA_HOME, something unexpected happened in $0
+		exit 1
 	fi
 	}
 
